@@ -11,6 +11,6 @@ find_package(SDL2 REQUIRED)
 add_definitions("-Wall")
 include_directories(${SDL2_INCLUDE_DIR})
 
-add_executable(board75 main.c)
+add_executable(board75 main.cpp board.cpp basicui.cpp)
 install(TARGETS board75 DESTINATION bin)
 target_link_libraries(board75 ${SDL2_LIBRARIES})
