@@ -2,15 +2,14 @@
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>
 
+static inline int diff(const int& i1, const int& i2)
+{
+    return i1 > i2 ? i1 - i2 : i2 -i1;
+}
 Board::Board(const int& L)
 :level(L)
 ,lastMove(move)
 {
-    stepBuffer = new Step* [L+1];
-    for(int i=0;i<=level;++i)
-    {
-        stepBuffer[i] = new Step[120];
-    }
     for(int row=1; row<8; ++row)
     {
         for(int col=1; col<6; ++col)
@@ -23,7 +22,7 @@ Board::Board(const int& L)
                 const int hor = (0 < dir && dir < 4) - (4 < dir);
                 toSet.next[dir] = &theGrid[row + ver][col + hor];
             }
-            toSet.value = (4 - row)*(4 - row) - (3 - col)*(3 - col);
+            toSet.decreaseDepth = (diff(4, row) <= 1 && diff(3, col) <= 1) ? 0 : -1;
         }
     }
     for(int id = 0; id <5; ++id)
@@ -41,11 +40,6 @@ Board::Board(const int& L)
 
 Board::~Board()
 {
-    for(int i=0;i<=level;++i)
-    {
-        delete[] stepBuffer[i];
-    }
-    delete[] stepBuffer;
     std::cout<<"Finish"<<std::endl;
 }
 
@@ -94,42 +88,61 @@ void Board::redoStep()
     }
 }
 
+#define NL std::cout<<std::endl<<'|';
 void Board::show() const
 {
-    for(int row = 8; row >= 0; --row)
+    const char* separator = "---- ";
+    const char* empty     = "    |";
+    for(int row = 7;  row > 0; --row)
     {
-        std::cout<<std::endl;
-        for(int col = 0; col < 7; ++col)
+        NL
+        for(int col = 1; col < 6; ++col)
         {
-            const int CH = theGrid[row][col].occupied;
-            if(CH == WALL)
+            std::cout<<separator;
+        }        NL
+        for(int col = 1; col < 6; ++col)
+        {
+            const Node *field = &(theGrid[row][col]);
+            const int CH = field->occupied;
+            if(field == WIN && CH == 0)
             {
-                std::cout<<((col == 0 || col == 6) ? "#" : "##");
+                std::cout<<" () |";
+                continue;
             }
-            else if(CH < 0)
+            if(CH < 0)
             {
-                std::cout<<'A'<<(-1*CH);
+                std::cout<<' '<<'A'<<(-1*CH)<<" |";
             }
             else if(CH > 0)
             {
-                std::cout<<'X'<<CH;
+                std::cout<<' '<<'X'<<(CH)<<" |";
             }
             else
             {
-                std::cout<<"  ";
+                std::cout<<empty;
             }
         }
+    }
+    NL
+    for(int col = 1; col < 6; ++col)
+    {
+        std::cout<<separator;
     }
     std::cout<<std::endl;
 }
 
 Step Board::getStep()
 {
+    /*---- Crucial part ----*/
+    forseen = level + 16;
+    /*----------------------*/
+    
     Step best, test;
-    Step bestCollection[120], allSteps[120];
+    Step bestCollection[40], allSteps[40];
     int collectionID = 0, stepID = 0;
-    int highlight = -level;
-    int eval = -level;
+    int highlight = -forseen;
+    int eval = -forseen;
+    
     for (Node ** next = programStone; *next; ++next)
     {
         for (int dir = 0; dir < 8; ++dir)
@@ -153,7 +166,7 @@ Step Board::getStep()
     {
         test = allSteps[id];
         test.revertableStep();
-        eval = evalPlayer(highlight, level);
+        eval = evalPlayer(highlight, level + test.decreaseDepth());
         test.revertableStep();
         if (highlight < eval)
         {
@@ -163,23 +176,24 @@ Step Board::getStep()
         }
         else if (highlight == eval )
         {
-            bestCollection[collectionID] = test;
+            bestCollection[collectionID++] = test;
         }
     }
     return bestCollection[collectionID ? rand()%collectionID : 0];
 }
 
-int Board::evalPlayer(const int& bound, const int& deep)
+int Board::evalPlayer(const int& bound, const int& depth)
 {
-    if (deep == 0)
+    if (depth == 0)
     {
         return 0; //  heuristicValue(); // ToDo, heuristic evaulation might be required here
     }
     Step test;
-    Step * allSteps = stepBuffer[deep];
+    Step allSteps[40];
     int stepID = 0;
-    int highlight = deep;
-    int eval = deep;
+    --forseen;
+    int highlight = forseen;
+    int eval = forseen;
     for (Node ** next = playerStone; *next; ++next)
     {
         for (int dir = 0; dir < 8; ++dir)
@@ -188,7 +202,7 @@ int Board::evalPlayer(const int& bound, const int& deep)
             {
                 if (isWinnerStep(test))
                 {
-                    return -deep;
+                    return -(forseen++);
                 }
                 else
                 {
@@ -200,16 +214,17 @@ int Board::evalPlayer(const int& bound, const int& deep)
     /* there is no valid move */
     if(stepID == 0)
     {
-        return deep;
+        return forseen++;
     }
     for(int id = 0; id < stepID; ++id)
     {
         test = allSteps[id];
-        test.revertableStep();
-        eval = evalProgram(highlight, deep-1);
+        test.revertableStep(); 
+        eval = evalProgram(highlight, depth + test.decreaseDepth());
         test.step();
         if (eval <= bound)
         {
+            ++forseen;
             return eval;
         }
         if (highlight > eval)
@@ -217,20 +232,22 @@ int Board::evalPlayer(const int& bound, const int& deep)
             highlight = eval;
         }
     }
+    ++forseen;
     return highlight;
 }
 
-int Board::evalProgram(const int& bound, const int& deep)
+int Board::evalProgram(const int& bound, const int& depth)
 {
-    if (deep == 0)
+    if (depth == 0)
     {
         return 0; //  heuristicValue(); // ToDo, heuristic evaulation might be required here
     }
     Step test;
-    Step * allSteps = stepBuffer[deep];
+    Step allSteps[40];
     int stepID = 0;
-    int highlight = -deep;
-    int eval = -deep;
+    --forseen;
+    int highlight = -forseen;
+    int eval = -forseen;
     for (Node ** next = programStone; *next; ++next)
     {
         for (int dir = 0; dir < 8; ++dir)
@@ -239,7 +256,7 @@ int Board::evalProgram(const int& bound, const int& deep)
             {
                 if (isWinnerStep(test))
                 {
-                    return deep;
+                    return forseen++ ;
                 }
                 else
                 {
@@ -251,16 +268,17 @@ int Board::evalProgram(const int& bound, const int& deep)
     /* there is no valid move */
     if(stepID == 0)
     {
-        return -deep;
+        return -(forseen++);
     }
     for(int id = 0; id < stepID; ++id)
     {
         test = allSteps[id];
         test.revertableStep();
-        eval = evalPlayer(highlight, deep-1);
+        eval = evalPlayer(highlight, depth + test.decreaseDepth());
         test.step();
         if (eval >= bound)
         {
+            ++forseen;
             return eval;
         }
         if (highlight < eval)
@@ -268,15 +286,12 @@ int Board::evalProgram(const int& bound, const int& deep)
             highlight = eval;
         }
     }
+    ++forseen;
     return highlight;
 }
 
 int Board::heuristicValue() 
 {
-    int retVal = 0;
-    for (Node ** next = programStone; *next; ++next)
-    {
-        retVal += (*next)->value;
-    }
+    // ToDo 
     return 0;
 }

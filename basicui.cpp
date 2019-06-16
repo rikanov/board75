@@ -59,6 +59,7 @@ bool BasicUI::myTurn()
     teszt->show();
     if (teszt->isWinnerStep(st))
     {
+        teszt->show();
         std::cout << "AI WON !!!" << std::endl;
         char a; std::cin >> a;
         win = true;
@@ -72,7 +73,7 @@ bool BasicUI::yourTurn()
     Step st;
     for (bool valid = false; !valid;)
     {
-        std::cout << "> " << std::flush;
+        std::cout << std::endl << "> " << std::flush;
         std::cin.clear();
         int id, dir;
         std::cin >> id >> dir;
@@ -84,7 +85,7 @@ bool BasicUI::yourTurn()
         }
     }
     teszt->storeStep(st);
-    system("clear");
+    system("clear"); 
     teszt->show();
     if (teszt->isWinnerStep(st))
     {

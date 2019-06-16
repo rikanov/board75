@@ -9,15 +9,14 @@ struct Node
 {
     Node* next[8] = {};
     int occupied = WALL;
-    int value = 0;
+    int decreaseDepth = -1;
 };
 
 struct Step
 {
     Node ** stone;
     Node * place;
-    Node * tmp;
-    
+   
     public:
     Step(): stone(nullptr), place(nullptr) {}
     Step(Node ** s, Node * p): stone(s), place(p) {}
@@ -34,6 +33,11 @@ struct Step
         place->occupied = (*stone)->occupied; // put down
         (*stone)->occupied = 0;              // and pick up
         std::swap(*stone, place);
+    }
+    
+    int decreaseDepth() const
+    {
+        return (*stone)->decreaseDepth;
     }
 };
 
@@ -52,14 +56,15 @@ class Board
     protected:
     
     const Node* WIN;
-    const int level;
+    
+    const int level; 
+    int forseen;
+    
 
     Node theGrid[9][7];
     Node * playerStone[6];
     Node * programStone[6];
     Step move[MAX_NUMBER_OF_MOVES], *lastMove;
-    
-    Step ** stepBuffer;
     
     int evalPlayer(const int&, const int&);
     int evalProgram(const int&, const int&);
