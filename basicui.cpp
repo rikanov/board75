@@ -59,7 +59,6 @@ bool BasicUI::myTurn()
     teszt->show();
     if (teszt->isWinnerStep(st))
     {
-        teszt->show();
         std::cout << "AI WON !!!" << std::endl;
         char a; std::cin >> a;
         win = true;
