@@ -18,9 +18,24 @@
  */
 
 #include "basicui.h"
+#ifdef _WIN32
+	#include <windows.h>
+	static inline void CLR() { system("cls"); }
+	static inline void sleep(unsigned milliseconds)
+	{
+		Sleep(milliseconds);
+	}
+#else
+	#include <unistd.h>
+	static inline void CLR() { system("clear"); }
+	static inline void sleep(unsigned milliseconds)
+	{
+		usleep(milliseconds * 1000); // takes microseconds
+	}
+#endif 
 
 BasicUI::BasicUI(const int& level, const bool& player_begin)
-:teszt(new Board(level))
+:board(new Board(level))
 ,isPlayerTurn(player_begin)
 {
     
@@ -33,8 +48,8 @@ BasicUI::~BasicUI()
 void BasicUI::start()
 {
   Step st;
-  system("clear");
-  teszt->show();
+  CLR();
+  board->show();
   for(bool finish = false; !finish;)
   {
       if (isPlayerTurn)
@@ -53,11 +68,11 @@ void BasicUI::start()
 bool BasicUI::myTurn()
 {
     bool win = false;
-    Step st = teszt->getStep();
-    teszt->storeStep(st);
-    system("clear");
-    teszt->show();
-    if (teszt->isWinnerStep(st))
+    Step st = board->getStep();
+    board->storeStep(st);
+	CLR();
+    board->show();
+    if (board->isWinnerStep(st))
     {
         std::cout << "AI WON !!!" << std::endl;
         char a; std::cin >> a;
@@ -76,17 +91,45 @@ bool BasicUI::yourTurn()
         std::cin.clear();
         int id, dir;
         std::cin >> id >> dir;
-        valid = teszt->makeStep(id, dir, st);
+		sleep(1);
+		if (id == 0 && dir < 0  && board->isStarted())
+		{
+			board->undoStep();
+			CLR();
+			board->show();
+			sleep(2);
+			board->undoStep();
+			CLR();
+			board->show();
+			sleep(2);
+			continue;
+		}
+		else if (id == 0 && dir > 0)
+		{
+			board->redoStep();
+			CLR();
+			board->show();
+			sleep(2);
+			board->redoStep();
+			CLR();
+			board->show();
+			sleep(2);
+			continue;
+		}
+		else
+		{
+			valid = board->makeStep(id, dir, st);
+		}
 
         if (!valid)
         {
             std::cout << "ERR: " << id << ':' << dir << std::endl;
         }
     }
-    teszt->storeStep(st);
-    system("clear"); 
-    teszt->show();
-    if (teszt->isWinnerStep(st))
+    board->storeStep(st);
+	CLR();
+    board->show();
+    if (board->isWinnerStep(st))
     {
         std::cout << "YOU WON !!!" << std::endl;
         char a; std::cin >> a;

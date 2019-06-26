@@ -10,6 +10,7 @@ struct Node
     Node* next[8] = {};
     int occupied = WALL;
     int decreaseDepth = -1;
+	int row, col;
 };
 
 struct Step
@@ -21,13 +22,7 @@ struct Step
     Step(): stone(nullptr), place(nullptr) {}
     Step(Node ** s, Node * p): stone(s), place(p) {}
     Step(const Step&) = default;
-   
-    void step()
-    {
-        place->occupied = (*stone)->occupied; // put down
-        (*stone)->occupied = 0;              // and pick up
-        *stone = place;
-    }
+	bool isValid() const { return stone != nullptr && place != nullptr; }
     void revertableStep()
     {
         place->occupied = (*stone)->occupied; // put down
@@ -39,6 +34,11 @@ struct Step
     {
         return (*stone)->decreaseDepth;
     }
+
+	void printData() const
+	{
+		printf("X%d->(%d, %d) ", (*stone)->occupied, place->row, place->col);
+	}
 };
 
 struct Position
@@ -53,22 +53,35 @@ struct Position
 
 class Board
 {
-    protected:
-    
+public:
+	enum Result
+	{
+		LOST = -1,
+		UNSURE = 0,
+		WON = 1
+	};
+	enum Turn
+	{
+		MINE,
+		YOURS
+	};
+protected:
+
     const Node* WIN;
-    
-    const int level; 
-    int forseen;
-    
+    const int bound; 
+	int level;
 
     Node theGrid[9][7];
-    Node * playerStone[6];
-    Node * programStone[6];
+    Node * collectionOfPlayer[6];
+    Node * collectionOfProgram[6];
     Step move[MAX_NUMBER_OF_MOVES], *lastMove;
     
-    int evalPlayer(const int&, const int&);
-    int evalProgram(const int&, const int&);
-    int heuristicValue();
+	Step usableSteps[40]; int numberOfUsabelSteps;
+
+	void shuffle();
+
+	Result seek(Turn, const int&, const bool& fastCheck = false);
+	Step randomStep();
 
     public:
     Board(const int&);
@@ -80,7 +93,8 @@ class Board
     void undoStep();
     void redoStep();
 
-    Step getStep();
+	void getUsableSteps();
+	Step getStep();
     bool isWinnerStep(const Step& S) const { return S.place == WIN; }
     
     void show() const;

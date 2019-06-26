@@ -24,7 +24,7 @@
 
 class BasicUI
 {
-    Board * teszt; 
+    Board * board; 
 
     bool myTurn();
     bool yourTurn();

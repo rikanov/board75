@@ -1,13 +1,15 @@
 #include "board.h"
+#include <algorithm>    // std::shuffle
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>
 
-static inline int diff(const int& i1, const int& i2)
+static int diff(const int& i1, const int& i2)
 {
     return i1 > i2 ? i1 - i2 : i2 -i1;
 }
+
 Board::Board(const int& L)
-:level(L)
+:bound(L)
 ,lastMove(move)
 {
     for(int row=1; row<8; ++row)
@@ -15,6 +17,8 @@ Board::Board(const int& L)
         for(int col=1; col<6; ++col)
         {
             theGrid[row][col].occupied = 0;
+			theGrid[row][col].row = row;
+			theGrid[row][col].col = col;
             Node & toSet = theGrid[row][col];
             for (int dir = 0; dir < 8; ++dir)
             {
@@ -27,13 +31,13 @@ Board::Board(const int& L)
     }
     for(int id = 0; id <5; ++id)
     {
-        playerStone[id] = &theGrid[1][id+1];
-        playerStone[id]->occupied = -id-1;
-        programStone[id]= &theGrid[7][id+1];
-        programStone[id]->occupied = id+1;
+		collectionOfPlayer[id] = &theGrid[1][id+1];
+		collectionOfPlayer[id]->occupied = -id-1;
+		collectionOfProgram[id] = &theGrid[7][id+1];
+		collectionOfProgram[id]->occupied = id+1;
     }
-    playerStone[5] = nullptr;
-    programStone[5] = nullptr;
+    collectionOfPlayer[5] = nullptr;
+    collectionOfProgram[5] = nullptr;
     WIN = &theGrid[4][3];
     srand(time(NULL));
 }
@@ -43,16 +47,26 @@ Board::~Board()
     std::cout<<"Finish"<<std::endl;
 }
 
+void Board::shuffle()
+{
+	//--- Shuffle OFF ---//
+	return;
+	//------------------//
+	for (int index = 0; index < 5; ++index)
+	{
+		int id = rand() % 5;
+		if (id != index)
+		{
+			std::swap( *(collectionOfProgram + index), *(collectionOfProgram + id));
+		}
+	}
+}
 bool Board::makeStep(const int& id, const int& dir, Step& step)
 {
     Node ** stone = nullptr;
     if(id < 0)
     {
-        stone = playerStone-(id+1);
-    }
-    else if(id > 0)
-    {
-        stone = programStone+id-1;
+        stone = collectionOfPlayer-(id+1);
     }
     return stone ? makeStep(stone, dir, step) : false;
 }
@@ -76,30 +90,32 @@ void Board::storeStep(Step S)
 
 void Board::undoStep()
 {
-    if(lastMove != move)
-        (lastMove--)->revertableStep();
+	if (isStarted())
+	{
+		(lastMove--)->revertableStep();
+	}
 }
 
 void Board::redoStep()
 {
-    if(lastMove->stone)
+    if((lastMove + 1)->isValid())
     {
         (++lastMove)->revertableStep();
     }
 }
 
-#define NL std::cout<<std::endl<<'|';
+static inline void NL() { std::cout << std::endl << '|'; }
 void Board::show() const
 {
     const char* separator = "---- ";
     const char* empty     = "    |";
     for(int row = 7;  row > 0; --row)
     {
-        NL
+        NL();
         for(int col = 1; col < 6; ++col)
         {
             std::cout<<separator;
-        }        NL
+        }        NL();
         for(int col = 1; col < 6; ++col)
         {
             const Node *field = &(theGrid[row][col]);
@@ -123,175 +139,131 @@ void Board::show() const
             }
         }
     }
-    NL
+    NL();
     for(int col = 1; col < 6; ++col)
     {
-        std::cout<<separator;
+        std::cout << separator;
     }
-    std::cout<<std::endl;
+	NL();
+	for (int i = 0; i < numberOfUsabelSteps; ++i)
+	{
+		std::cout << i << ". ";  usableSteps[i].printData();
+	}
 }
 
+Step Board::randomStep()
+{
+	Step allSteps[40];
+	int stepID = 0;
+	Step test;
+	for (Node** nextStone = collectionOfProgram; *nextStone; ++nextStone)
+	{
+		for (int direction = 0; direction < 8; ++direction)
+		{
+			if (makeStep(nextStone, direction, test))
+			{
+				allSteps[stepID++] = test;
+			}
+		}
+	}
+	return allSteps[rand() % stepID];
+}
+Board::Result Board::seek(Turn T, const int& depth, const bool& fastCheck)
+{
+	bool fail = (depth != 0);
+	Step test;
+	Node ** setOfStones = (T == YOURS) ? collectionOfPlayer : collectionOfProgram;
+	Turn nextTurn = (T == YOURS) ? MINE : YOURS;
+	for (Node** nextStone = setOfStones; *nextStone; ++nextStone)
+	{
+		for (int direction = 0; direction < 8; ++direction)
+		{
+			if (makeStep(nextStone, direction, test))
+			{
+				if (isWinnerStep(test))
+				{
+					return WON;
+				}
+				if (depth == 0)
+				{
+					continue;
+				}
+				test.revertableStep();
+				const Result tip = seek(nextTurn, depth - 1, !fail);
+				test.revertableStep();
+				switch (tip)
+				{
+				case UNSURE:
+					if (fastCheck)
+					{
+						return UNSURE;
+					}
+					fail = false;
+					break;
+				case LOST:
+					return WON;
+				case WON:
+					break;
+				default:
+					break;
+				};
+			}
+		}
+	}
+	return fail ? LOST : UNSURE;
+}
+void Board::getUsableSteps()
+	{
+	numberOfUsabelSteps = 0;
+	Step test;
+	for (Node** nextStone = collectionOfProgram; *nextStone; ++nextStone)
+	{
+		for (int direction = 0; direction < 8; ++direction)
+		{
+			if (makeStep(nextStone, direction, test))
+			{
+				if (isWinnerStep(test))
+				{
+					numberOfUsabelSteps = 0;
+					usableSteps[numberOfUsabelSteps++] = test;
+					return;
+				}
+				if (level == 0)
+				{
+					continue;
+				}
+				test.revertableStep();
+				const Result tip = seek(YOURS, level - 1);
+				test.revertableStep();
+				switch (tip)
+				{
+				case UNSURE:
+					usableSteps[numberOfUsabelSteps++] = test;
+					break;
+				case LOST:
+					numberOfUsabelSteps = 0;
+					usableSteps[numberOfUsabelSteps++] = test;
+					return;
+				case WON:
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+}
 Step Board::getStep()
 {
-    /*---- Crucial part ----*/
-    forseen = level + 16;
-    /*----------------------*/
-    
-    Step best, test;
-    Step bestCollection[40], allSteps[40];
-    int collectionID = 0, stepID = 0;
-    int highlight = -forseen;
-    int eval = -forseen;
-    
-    for (Node ** next = programStone; *next; ++next)
-    {
-        for (int dir = 0; dir < 8; ++dir)
-        {
-            if (makeStep(next, dir, test))
-            {
-                if (isWinnerStep(test))
-                {
-                    return test;
-                }
-                else
-                {
-                    allSteps[stepID++] = test;
-                }
-            }
-        }
-    }
-    /* an extreme situation: no valid moves and it implies instant defeat */
-    /* function will return with invalid step, it must be handled by UI  */
-    for(int id = 0; id < stepID; ++id)
-    {
-        test = allSteps[id];
-        test.revertableStep();
-        eval = evalPlayer(highlight, level + test.decreaseDepth());
-        test.revertableStep();
-        if (highlight < eval)
-        {
-            collectionID = 1;
-            bestCollection[0] = test;
-            highlight = eval;
-        }
-        else if (highlight == eval )
-        {
-            bestCollection[collectionID++] = test;
-        }
-    }
-    return bestCollection[collectionID ? rand()%collectionID : 0];
-}
-
-int Board::evalPlayer(const int& bound, const int& depth)
-{
-    if (depth == 0)
-    {
-        return 0; //  heuristicValue(); // ToDo, heuristic evaulation might be required here
-    }
-    Step test;
-    Step allSteps[40];
-    int stepID = 0;
-    --forseen;
-    int highlight = forseen;
-    int eval = forseen;
-    for (Node ** next = playerStone; *next; ++next)
-    {
-        for (int dir = 0; dir < 8; ++dir)
-        {
-            if (makeStep(next, dir, test))
-            {
-                if (isWinnerStep(test))
-                {
-                    return -(forseen++);
-                }
-                else
-                {
-                    allSteps[stepID++] = test;
-                }
-            }
-        }
-    }
-    /* there is no valid move */
-    if(stepID == 0)
-    {
-        return forseen++;
-    }
-    for(int id = 0; id < stepID; ++id)
-    {
-        test = allSteps[id];
-        test.revertableStep(); 
-        eval = evalProgram(highlight, depth + test.decreaseDepth());
-        test.step();
-        if (eval <= bound)
-        {
-            ++forseen;
-            return eval;
-        }
-        if (highlight > eval)
-        {
-            highlight = eval;
-        }
-    }
-    ++forseen;
-    return highlight;
-}
-
-int Board::evalProgram(const int& bound, const int& depth)
-{
-    if (depth == 0)
-    {
-        return 0; //  heuristicValue(); // ToDo, heuristic evaulation might be required here
-    }
-    Step test;
-    Step allSteps[40];
-    int stepID = 0;
-    --forseen;
-    int highlight = -forseen;
-    int eval = -forseen;
-    for (Node ** next = programStone; *next; ++next)
-    {
-        for (int dir = 0; dir < 8; ++dir)
-        {
-            if (makeStep(next, dir, test))
-            {
-                if (isWinnerStep(test))
-                {
-                    return forseen++ ;
-                }
-                else
-                {
-                    allSteps[stepID++] = test;
-                }
-            }
-        }
-    }
-    /* there is no valid move */
-    if(stepID == 0)
-    {
-        return -(forseen++);
-    }
-    for(int id = 0; id < stepID; ++id)
-    {
-        test = allSteps[id];
-        test.revertableStep();
-        eval = evalPlayer(highlight, depth + test.decreaseDepth());
-        test.step();
-        if (eval >= bound)
-        {
-            ++forseen;
-            return eval;
-        }
-        if (highlight < eval)
-        {
-            highlight = eval;
-        }
-    }
-    ++forseen;
-    return highlight;
-}
-
-int Board::heuristicValue() 
-{
-    // ToDo 
-    return 0;
+	shuffle();
+	int stepID = 0;
+	for (level = 0; level <= bound; level += 2)
+	{
+		getUsableSteps();
+		if (numberOfUsabelSteps == 1)
+		{
+			return usableSteps[0];
+		}
+	}
+	return numberOfUsabelSteps > 0 ? usableSteps[rand() % numberOfUsabelSteps] : randomStep();
 }
