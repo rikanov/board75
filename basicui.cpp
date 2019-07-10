@@ -18,6 +18,8 @@
  */
 
 #include "basicui.h"
+#include <unistd.h>
+/*
 #ifdef _WIN32
 	#include <windows.h>
 	static inline void CLR() { system("cls"); }
@@ -27,18 +29,21 @@
 	}
 #else
 	#include <unistd.h>
-	static inline void CLR() { system("clear"); }
+	static inline void CLR() { stdd::cout << std::endl; system("clear"); }
 	static inline void sleep(unsigned milliseconds)
 	{
 		usleep(milliseconds * 1000); // takes microseconds
 	}
-#endif 
+#endif //*/
+static inline void CLR() {
+    system("clear");
+}
 
-BasicUI::BasicUI(const int& level, const bool& player_begin)
-:board(new Board(level))
-,isPlayerTurn(player_begin)
+BasicUI::BasicUI(const int& size, const int& level, const bool& player_begin)
+    :board(new Board(size, level))
+    ,isPlayerTurn(player_begin)
 {
-    
+
 }
 
 BasicUI::~BasicUI()
@@ -47,22 +52,22 @@ BasicUI::~BasicUI()
 
 void BasicUI::start()
 {
-  Step st;
-  CLR();
-  board->show();
-  for(bool finish = false; !finish;)
-  {
-      if (isPlayerTurn)
-      {
-          finish = yourTurn();
-          isPlayerTurn = false;
-      }
-      else
-      {
-          finish = myTurn();
-          isPlayerTurn = true;
-      }
-  }
+    Step st;
+    CLR();
+    board->show();
+    for(bool finish = false; !finish;)
+    {
+        if (isPlayerTurn)
+        {
+            finish = yourTurn();
+            isPlayerTurn = false;
+        }
+        else
+        {
+            finish = myTurn();
+            isPlayerTurn = true;
+        }
+    }
 }
 
 bool BasicUI::myTurn()
@@ -70,12 +75,11 @@ bool BasicUI::myTurn()
     bool win = false;
     Step st = board->getStep();
     board->storeStep(st);
-	CLR();
+    CLR();
     board->show();
     if (board->isWinnerStep(st))
     {
         std::cout << "AI WON !!!" << std::endl;
-        char a; std::cin >> a;
         win = true;
     }
     return win;
@@ -89,37 +93,35 @@ bool BasicUI::yourTurn()
     {
         std::cout << std::endl << "> " << std::flush;
         std::cin.clear();
+        std::cin.ignore(8, '\n');
         int id, dir;
         std::cin >> id >> dir;
-		sleep(1);
-		if (id == 0 && dir < 0  && board->isStarted())
-		{
-			board->undoStep();
-			CLR();
-			board->show();
-			sleep(2);
-			board->undoStep();
-			CLR();
-			board->show();
-			sleep(2);
-			continue;
-		}
-		else if (id == 0 && dir > 0)
-		{
-			board->redoStep();
-			CLR();
-			board->show();
-			sleep(2);
-			board->redoStep();
-			CLR();
-			board->show();
-			sleep(2);
-			continue;
-		}
-		else
-		{
-			valid = board->makeStep(id, dir, st);
-		}
+        if (id == 0 && dir < 0  && board->isStarted())
+        {
+            board->undoStep();
+            CLR();
+            board->show();
+            sleep(1);
+            board->undoStep();
+            CLR();
+            board->show();
+            continue;
+        }
+        else if (id == 0 && dir > 0)
+        {
+            board->redoStep();
+            CLR();
+            board->show();
+            sleep(1);
+            board->redoStep();
+            CLR();
+            board->show();
+            continue;
+        }
+        else
+        {
+            valid = board->makeStep(id, dir, st);
+        }
 
         if (!valid)
         {
@@ -127,12 +129,11 @@ bool BasicUI::yourTurn()
         }
     }
     board->storeStep(st);
-	CLR();
+    CLR();
     board->show();
     if (board->isWinnerStep(st))
     {
         std::cout << "YOU WON !!!" << std::endl;
-        char a; std::cin >> a;
         win = true;
     }
     return win;

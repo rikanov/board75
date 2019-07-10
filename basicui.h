@@ -31,7 +31,7 @@ class BasicUI
     bool isPlayerTurn;
     
 public:
-    BasicUI(const int& level, const bool& player_begin);
+    BasicUI(const int& size, const int& level, const bool& player_begin);
     ~BasicUI();
     void start();
 };
