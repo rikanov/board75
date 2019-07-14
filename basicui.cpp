@@ -42,19 +42,19 @@ static inline void CLR() {
 BasicUI::BasicUI(const int& size, const int& level, const bool& player_begin, const bool& auto_play)
     :_autoPlay(auto_play)
 {
-    _board = new Board(size, level);
+    _engine = new Engine(size, level);
     _isPlayerTurn = player_begin;
 }
 
 BasicUI::~BasicUI()
 {
-    delete _board;
+    delete _engine;
 }
 
 void BasicUI::start()
 {
     CLR();
-    _board->show();
+    _engine->show();
     for(bool finish = false; !finish;)
     {
         if ( _isPlayerTurn )
@@ -73,11 +73,11 @@ void BasicUI::start()
 bool BasicUI::myTurn()
 {
     bool win = false;
-    Step st = _board->getStep();
-    _board->storeStep(st);
+    Step st = _engine->getStep();
+    _engine->storeStep(st);
     CLR();
-    _board->show();
-    if ( _board->isWinnerStep(st))
+    _engine->show();
+    if ( _engine->isWinnerStep(st))
     {
         std::cout << "AI WON !!!" << std::endl;
         win = true;
@@ -96,31 +96,31 @@ bool BasicUI::yourTurn()
         std::cin.ignore(8, '\n');
         int id, dir;
         std::cin >> id >> dir;
-        if (id == 0 && dir < 0  && _board->isStarted())
+        if (id == 0 && dir < 0  && _engine->isStarted())
         {
-            _board->undoStep();
+            _engine->undoStep();
             CLR();
-            _board->show();
+            _engine->show();
             sleep(1);
-            _board->undoStep();
+            _engine->undoStep();
             CLR();
-            _board->show();
+            _engine->show();
             continue;
         }
         else if (id == 0 && dir > 0)
         {
-            _board->redoStep();
+            _engine->redoStep();
             CLR();
-            _board->show();
+            _engine->show();
             sleep(1);
-            _board->redoStep();
+            _engine->redoStep();
             CLR();
-            _board->show();
+            _engine->show();
             continue;
         }
         else
         {
-            valid = _board->makeStep(id, dir, st);
+            valid = _engine->makeStep(id, dir, st);
         }
 
         if (!valid)
@@ -128,10 +128,10 @@ bool BasicUI::yourTurn()
             std::cout << "ERR: " << id << ':' << dir << std::endl;
         }
     }
-    _board->storeStep(st);
+    _engine->storeStep(st);
     CLR();
-    _board->show();
-    if ( _board->isWinnerStep(st))
+    _engine->show();
+    if ( _engine->isWinnerStep(st))
     {
         std::cout << "YOU WON !!!" << std::endl;
         win = true;
@@ -144,18 +144,18 @@ bool BasicUI::autoPlay(const int& level)
     bool win = false;
     if (level > 0)
     {
-        _board->boundLevel(level);
+        _engine->boundLevel(level);
     }
-    Step st = _board->getStep();
-    _board->storeStep(st);
+    Step st = _engine->getStep();
+    _engine->storeStep(st);
     CLR();
-    _board->show();
-    if ( _board->isWinnerStep(st))
+    _engine->show();
+    if ( _engine->isWinnerStep(st))
     {
         std::cout << "THE" << (_isPlayerTurn ?  " HEURISTIC " : " SIMPLIER") << " AI WON !!!" << std::endl;
         win = true;
     }
-    _board->swapOpponents();
+    _engine->swapOpponents();
     return win;
 }
 

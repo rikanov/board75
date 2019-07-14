@@ -22,7 +22,7 @@
 #define VIEW2D_H
 
 #include "sdl_dep.h"
-#include "board.h"
+#include "engine.h"
 
 class View2D
 {
@@ -39,7 +39,7 @@ class View2D
     SDL_Texture * _boardBackground;
     SDL_Rect _boardPosition;
     
-    Board & _board;
+    Engine & _engine;
   
     void createWindow();
     void loadTextureImage();
@@ -48,7 +48,7 @@ class View2D
     void show() const;
     
 public:
-    View2D(const char* name,const int w, const int h, Board& );
+    View2D(const char* name,const int w, const int h, Engine& );
     ~View2D(); 
     void select();
 };

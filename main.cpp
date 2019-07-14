@@ -4,7 +4,7 @@
 
 int main(int argc, char ** argv)
 {
-    Board board(5, 7);
+    Engine board(5, 7);
     View2D teszt("BOARD", 450, 630, board);
     teszt.select();
     return 0;

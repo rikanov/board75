@@ -20,11 +20,11 @@
 #ifndef BASICUI_H
 #define BASICUI_H
 
-#include "board.h"
+#include "engine.h"
 
 class BasicUI
 {
-    Board * _board; 
+    Engine * _engine; 
     const bool _autoPlay;
 
     bool myTurn();

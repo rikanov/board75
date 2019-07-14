@@ -26,11 +26,11 @@ static const int STEP_Y = 88;
 
 bool View2D::SDL_Initialized = false;
 
-View2D::View2D(const char* name,const int w, const int h, Board& B)
+View2D::View2D(const char* name,const int w, const int h, Engine& B)
 :SCR_WIDTH(w)
 ,SCR_HEIGHT(h)
 ,_winName (name)
-,_board(B)
+,_engine(B)
 {
     if(!SDL_Initialized )
     {
@@ -108,7 +108,7 @@ void View2D::showStones() const
         for(int ID = 1; ID < 6; ++ID)
         {
             SDL_Rect pos;
-            const Node place = *_board.getStone(team == 0 ? - ID : ID);
+            const Node place = *_engine.getStone(team == 0 ? - ID : ID);
             pos.x = OFFSET_X + (place.col - 1) * STEP_X;
             pos.y = OFFSET_Y + (place.row - 1) * STEP_Y;
             pos.w = STONE_SIZE;
@@ -144,14 +144,14 @@ void View2D::select()
                 case SDLK_LEFT:
                     return;
                 case SDLK_RIGHT:
-                    if (_board.isFinished())
+                    if (_engine.isFinished())
                     {
-                        _board.reset();
+                        _engine.reset();
                     }
                     else
                     {
-                        _board.storeStep(_board.getStep());
-                        _board.seekerSwap();
+                        _engine.storeStep(_engine.getStep());
+                        _engine.seekerSwap();
                     }             
                     break;
                 case SDLK_ESCAPE:
