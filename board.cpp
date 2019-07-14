@@ -15,8 +15,6 @@ Board::Board(const int& S, const int& L)
     ,__collectionOfPlayer(new Node* [_cols + 1])  /*null-terminated array*/
     ,__collectionOfProgram(new Node* [_cols + 1]) /*null-terminated array*/
 {
-    // heuristic ON
-    heuristicOn();
     // n-th power values for heuristic deep sum
     __pow[0] = 1;
     for (int i = 1; i < _bound; ++i)
@@ -60,7 +58,21 @@ Board::Board(const int& S, const int& L)
             toSet.decreaseDepth = (diff((_rows + 1) / 2, row) <= 1 && diff((_cols + 1) / 2, col) <= 1) ? 0 : -1;
         }
     }
-    // put stones onto the board
+    reset();
+    // set the middle field of the board as the place of victory
+    _WINNER_SPOT = &__theGrid[(_rows + 1) / 2][(_cols + 1) / 2];
+    // --------------- //
+}
+
+void Board::reset()
+{
+    for (int row = 1; row < _rows + 1; ++row)
+    {
+        for(int col = 1; col < _cols + 1; ++col)
+        {
+            __theGrid[row][col].occupied = 0;
+        }
+    }
     for(int id = 0; id <_cols; ++id)
     {
         __collectionOfPlayer[id] = &__theGrid[1][id + 1];
@@ -71,9 +83,6 @@ Board::Board(const int& S, const int& L)
     // null-terminate arrays for the opponents' stones
     __collectionOfPlayer[_cols] = nullptr;
     __collectionOfProgram[_cols] = nullptr;
-    // set the middle field of the board as the place of victory
-    _WINNER_SPOT = &__theGrid[(_rows + 1) / 2][(_cols + 1) / 2];
-    // --------------- //
 
     // --- set step stacks for UI -- //
     _lastMove =  __move;
@@ -83,15 +92,11 @@ Board::Board(const int& S, const int& L)
 
 Board::~Board()
 {
+    delete[] __collectionOfPlayer;
+    delete[] __collectionOfProgram;
     std::cout<<"Finish"<<std::endl;
 }
 
-void Board::shuffle()
-{
-    //--- Shuffle OFF ---//
-    return;
-    //------------------//
-}
 bool Board::makeStep(const int& id, const int& dir, Step& step)
 {
     Node ** stone = nullptr;
@@ -183,12 +188,49 @@ void Board::show() const
         std::cout << separator;
     }
     NL();
-    std::cout << _level << (_numberOfUsableSteps > 0 ? ' ' : '*');
+    std::cout << _level <<  ':'  <<_numberOfUsableSteps;
 }
 
-Board::Result Board::seek(Turn T, const int& depth, const bool& fastCheck)
+Board::Result Board::seek0(Board::Turn T, const bool& fast_check)
 {
-    bool fail = (depth != 0);
+    Step test;
+    Node ** setOfStones = (T == YOUR_TURN) ? __collectionOfPlayer : __collectionOfProgram;
+    if (fast_check)
+    {
+        for (Node** nextStone = setOfStones; *nextStone; ++nextStone)
+        {
+            for (int direction = 0; direction < 8; ++direction)
+            {
+                if (makeStep(nextStone, direction, test) && isWinnerStep(test))
+                {
+                    return WON;
+                }
+            }
+        }
+    }
+    else
+    {
+        for (Node** nextStone = setOfStones; *nextStone; ++nextStone)
+        {
+            for (int direction = 0; direction < 8; ++direction)
+            {
+                if (makeStep(nextStone, direction, test) )
+                {
+                    return isWinnerStep(test) ? WON : UNSURE;
+                }
+            }
+        }
+    }
+    return UNSURE;
+}
+
+Board::Result Board::seek(Turn T, const int& depth, const bool& fast_check)
+{
+    if (depth == 0)
+    {
+        return seek0(T,fast_check);
+    }
+    bool fail = true;
     Step test;
     Node ** setOfStones = (T == YOUR_TURN) ? __collectionOfPlayer : __collectionOfProgram;
     Turn nextTurn = (T == YOUR_TURN) ? MY_TURN : YOUR_TURN;
@@ -212,7 +254,7 @@ Board::Result Board::seek(Turn T, const int& depth, const bool& fastCheck)
                 switch (tip)
                 {
                 case UNSURE:
-                    if (fastCheck)
+                    if (fast_check)
                     {
                         return UNSURE;
                     }
@@ -230,57 +272,60 @@ Board::Result Board::seek(Turn T, const int& depth, const bool& fastCheck)
     }
     return fail ? LOST : UNSURE;
 }
+
 void Board::getUsableSteps()
 {
+    bool fastCheck = false;
     _numberOfUsableSteps = 0;
-    Step test;
-    for (Node** nextStone = __collectionOfProgram; *nextStone; ++nextStone)
+    for(int id =  getAllowedSteps() ; id > 0; --id)
     {
-        for (int direction = 0; direction < 8; ++direction)
+        Step test = __allowedSteps[id - 1]; 
+        if (isWinnerStep(test))
         {
-            if (makeStep(nextStone, direction, test))
-            {
-                if (isWinnerStep(test))
-                {
-                    _numberOfUsableSteps = 0;
-                    __usableSteps[_numberOfUsableSteps++] = test;
-                    return;
-                }
-                if (_level == 0)
-                {
-                    __usableSteps[_numberOfUsableSteps++] = test;
-                    continue;
-                }
-                test.revertableStep();
-                const Result tip = seek(YOUR_TURN, _level - 1);
-                test.revertableStep();
-                switch (tip)
-                {
-                case UNSURE:
-                    __usableSteps[_numberOfUsableSteps++] = test;
-                    break;
-                case LOST:
-                    _numberOfUsableSteps = 0;
-                    __usableSteps[_numberOfUsableSteps++] = test;
-                    return;
-                case WON:
-                    break;
-                default:
-                    break;
-                }
-            }
+            _numberOfUsableSteps = 1;
+            __usableSteps[0] = test;
+            return;
         }
+        if (_level == 0)
+        {
+            __usableSteps[_numberOfUsableSteps++] = test;
+            continue;
+        }
+        test.revertableStep();
+        const Result tip = seek(_getStepsForAi ? YOUR_TURN : MY_TURN, _level - 1, fastCheck);
+        test.revertableStep();
+        switch (tip)
+        {
+        case UNSURE:
+            if ( !fastCheck)
+            {
+                __usableSteps[_numberOfUsableSteps++] = test;
+                fastCheck = (_numberOfUsableSteps > 2);
+            }
+            break;
+        case LOST:
+            _numberOfUsableSteps = 1;
+            __usableSteps[0] = test;
+            return;
+        case WON:
+            break;
+        default:
+            break;
+        }      
     }
 }
+
 Step Board::getStep()
 {
-    shuffle();
     Step bestFound;
-    Step rescueSteps[40];
+    Step rescueSteps[MAX_NUMBER_OF_STONES * 8];
     int numberOfRescuedSteps = 0;
+    std::cout << std::endl;
     for (_level = 0; _level <= _bound; _level += 1)
     {
+        std::cout << _level << std::flush;
         getUsableSteps();
+        std::cout << " .. " << std::flush;
         if (_numberOfUsableSteps == 1)
         {
             bestFound = __usableSteps[0];
@@ -292,64 +337,45 @@ Step Board::getStep()
             break; // we lost. try to rescue the game
         }
         // continue the searching and store the last known 'non-loser' steps for rescueing
-        for (numberOfRescuedSteps = 0; numberOfRescuedSteps < _numberOfUsableSteps; ++numberOfRescuedSteps)
+        for (numberOfRescuedSteps = 0; numberOfRescuedSteps < _numberOfUsableSteps ; ++numberOfRescuedSteps)
         {
             rescueSteps[numberOfRescuedSteps] = __usableSteps[numberOfRescuedSteps];
         }
     }
     if (_level > _bound /*obvious step not found*/ )
     {
-        bestFound = _heuristic ? getHeuristicStep() : __usableSteps[rand() % _numberOfUsableSteps] ;
+        bestFound =  __usableSteps[rand() % _numberOfUsableSteps] ;
     }
     return bestFound;
 }
 
-Step Board::getHeuristicStep()
+int Board::getAllowedSteps()
 {
-    if (rand() % 2 == 0 /* toss a coin */ )
-    {
-        return  __usableSteps[rand() % _numberOfUsableSteps] ; // just do an acceptable random step
-    }
-    // try to geuss the best step
-    Step result;
-    int bestReward = -1;
-    for (int stepID = 0; stepID < _numberOfUsableSteps; ++stepID)
-    {
-        Step nextStep = __usableSteps[stepID];
-        nextStep.revertableStep();
-        const int reward = promise(_bound / 2);
-        nextStep.revertableStep();
-        if (reward > bestReward)
-        {
-            bestReward = reward;
-            result = nextStep;
-        }
-    }
-    return result;
-}
-
-int Board::promise(const int& height)
-{
-    Step test;
-    int sum = 0;
-    for (Node** nextStone = __collectionOfProgram; *nextStone; ++nextStone)
+    int count = 0;
+    Step next;
+    for (Node** nextStone = _getStepsForAi ?  __collectionOfProgram : __collectionOfPlayer; *nextStone; ++nextStone)
     {
         for (int direction = 0; direction < 8; ++direction)
         {
-            if (makeStep(nextStone, direction, test))
+            if (makeStep(nextStone, direction, next))
             {
-                if (isWinnerStep(test))
-                {
-                    return __pow[height];
-                }
-                else
-                {
-                    test.revertableStep();
-                    sum += height > 0 ? promise(height - 1) : 0;
-                    test.revertableStep();
-                }
+                __allowedSteps[count++] = next;
             }
         }
     }
-    return sum;
+    // shuffle
+    for (int shuffle = count; shuffle; )
+    {
+        const int i1 = rand() % count;
+        const int i2 = rand() % count;
+        if ( i1 != i2)
+        {
+            std::swap(__allowedSteps[i1], __allowedSteps[i2]);
+        }
+        else
+        {
+            --shuffle;
+        }
+    }
+    return count ;
 }

@@ -4,9 +4,9 @@
 #include <iostream>
 
 static const int MAX_NUMBER_OF_MOVES = 200;
+static const int MAX_NUMBER_OF_STONES = 10;
 static const int MAX_HEURISTIC_DEPTH = 10;
 static const int WALL = -7;
-
 struct Node
 {
     Node* next[8] = {};
@@ -64,7 +64,7 @@ protected:
     int __pow[MAX_HEURISTIC_DEPTH];
     bool _heuristic;
     const Node* _WINNER_SPOT;
-    const int _bound;
+     int _bound;
     int _level;
 
     // Board grid [rows+2][columns+2]
@@ -75,29 +75,35 @@ protected:
     // Stones os players [columns]
     Node ** __collectionOfPlayer;
     Node ** __collectionOfProgram;
-
+    
     // Store steps for UI (undo, redo)
     Step __move[MAX_NUMBER_OF_MOVES], *_lastMove;
 
-    Step __usableSteps[40];
+    Step __usableSteps[MAX_NUMBER_OF_STONES * 8];
+    Step __allowedSteps[MAX_NUMBER_OF_STONES * 8];
+    bool _getStepsForAi = true;
     int _numberOfUsableSteps;
-    void shuffle();
-
-    Result seek(Turn, const int&, const bool& fastCheck = false);
-    Step getHeuristicStep();
-    int promise(const int&);
-
+    Result seek(Turn T, const int& depth, const bool& fast_check = false);
+    Result seek0(Turn, const bool&);
+    
+    void getUsableSteps();
+    int getAllowedSteps();
+    
 public:
     Board(const int&, const int&);
     ~Board();
-    void heuristicOn() {
-        _heuristic = true;
-    };
-    void heuristicOff() {
-        _heuristic = false;
-    };
-    void swapPlayers();
-
+    void swapOpponents() {
+        std::swap(__collectionOfPlayer, __collectionOfProgram);
+    }
+    const Node * getStone(const int & ID) const {
+        return ID > 0 ? __collectionOfProgram[ID - 1] : __collectionOfPlayer[-ID - 1];
+    }
+    const int& boundLevel() const {
+        return _bound;
+    }
+    void boundLevel(const int& bound) {
+        _bound = bound;
+    }
     bool makeStep(const int& id, const int&, Step& );
     bool makeStep(Node **, const int&, Step& );
     bool isStarted() const {
@@ -106,13 +112,25 @@ public:
     void storeStep(Step S);
     void undoStep();
     void redoStep();
-
-    void getUsableSteps();
+    void seekerSwap() {
+        _getStepsForAi = !_getStepsForAi;
+    }
+    void getStepsForAi(const bool& t) {
+        _getStepsForAi = t;
+    }
+    bool getStepsForAi() const {
+        return _getStepsForAi;
+    }
     Step getStep();
     bool isWinnerStep(const Step& S) const {
         return S.place == _WINNER_SPOT;
     }
-
+    
+    bool isFinished() const {
+        return _WINNER_SPOT->occupied;
+    }
+    
+    void reset();
     void show() const;
 };
 
