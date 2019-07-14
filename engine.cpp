@@ -236,12 +236,9 @@ Step Engine::getStep()
     Step bestFound;
     Step rescueSteps[MAX_NUMBER_OF_STONES * 8];
     int numberOfRescuedSteps = 0;
-    std::cout << std::endl;
     for (_level = 0; _level <= _bound; _level += 1)
     {
-        std::cout << _level << std::flush;
         getUsableSteps();
-        std::cout << " .. " << std::flush;
         if (_numberOfUsableSteps == 1)
         {
             bestFound = __usableSteps[0];
