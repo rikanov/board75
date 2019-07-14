@@ -20,20 +20,22 @@
 #ifndef BASICUI_H
 #define BASICUI_H
 
-#include"board.h"
+#include "board.h"
 
 class BasicUI
 {
-    Board * board; 
+    Board * _board; 
+    const bool _autoPlay;
 
     bool myTurn();
     bool yourTurn();
-    bool isPlayerTurn;
+    bool _isPlayerTurn;
     
 public:
-    BasicUI(const int& size, const int& level, const bool& player_begin);
+    BasicUI(const int& size, const int& level, const bool& player_begin, const bool& autoPlay = false);
     ~BasicUI();
-    void start();
+    void start();    
+    bool autoPlay(const int& level = 0);
 };
 
 #endif // BASICUI_H
