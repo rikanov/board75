@@ -19,6 +19,9 @@
 
 #include "basicui.h"
 #include <unistd.h>
+
+const int AUTOPLAY_LEVEL1 = 8;
+const int AUTOPLAY_LEVEL2 = 7;
 /*
 #ifdef _WIN32
 	#include <windows.h>
@@ -59,12 +62,12 @@ void BasicUI::start()
     {
         if ( _isPlayerTurn )
         {
-            finish = _autoPlay ? autoPlay(10) : yourTurn();
+            finish = _autoPlay ? autoPlay(AUTOPLAY_LEVEL1) : yourTurn();
             _isPlayerTurn = false;
         }
         else
         {
-            finish = _autoPlay ? autoPlay(9) :  myTurn();
+            finish = _autoPlay ? autoPlay(AUTOPLAY_LEVEL2) :  myTurn();
             _isPlayerTurn = true;
         }
     }

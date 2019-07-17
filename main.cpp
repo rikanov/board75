@@ -1,11 +1,12 @@
 
 #include "basicui.h"
+#include "view2d.h"
 
 const int size = 5;
 
 int main(int argc, char ** argv)
 {
-  /*  Engine board(5, 7);
+    Engine board(5, 7);
     View2D teszt("BOARD", 450, 630, board);
     teszt.select();
     return 0;//*/

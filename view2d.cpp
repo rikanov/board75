@@ -153,11 +153,14 @@ void View2D::glidingEffect(const Step& step)
     const int dy = n1.row - n0.row;
     const int team = (n0.occupied > 0);
     const int ID = team == 0 ? -n0.occupied : n0.occupied;
-    for(int i = 0; i < STEP_X ; ++i)
+    
+    std::cout << "glideing effect -->" << dx << " : " << dy << std::endl;
+    for(int i = 0; i < STEP_X  / 2; ++i)
     {
-        __stones[team][ID].x += dx;
-        __stones[team][ID].y -= dy;
+        __stones[team][ID].x += dx * 2;
+        __stones[team][ID].y -= dy * 2;
         show(false);
+        SDL_Delay(1);
     }
 }
 
