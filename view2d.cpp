@@ -153,9 +153,7 @@ void View2D::glidingEffect(const Step& step)
     const int dy = n1.row - n0.row;
     const int team = (n0.occupied > 0);
     const int ID = team == 0 ? -n0.occupied : n0.occupied;
-    
-    std::cout << "glideing effect -->" << dx << " : " << dy << std::endl;
-    const int speed = 6;
+    const int speed = 12;
     for(int i = 0; i < STEP_X  * std::max(abs(dx),  abs(dy) )  / speed ; ++i)
     {
         __stones[team][ID].x += sgn(dx) * speed;
@@ -192,19 +190,30 @@ void View2D::select()
             switch (event.key.keysym.sym) // ToDo
             {
                 case SDLK_LEFT:
-                    return;
+                if(_engine.isStarted())
+                {
+                    glidingEffect(_engine.reverseLast());
+                    _engine.undoStep();
+                    show();
+                }
+                break;
                 case SDLK_RIGHT:
                     if (_engine.isFinished())
                     {
                         _engine.reset();
                     }
-                    else
+                    else if(_engine.isTheLastMove())
                     {
                         const Step step = _engine.getStep();
                         glidingEffect(step);
                         _engine.storeStep(step);
                         _engine.seekerSwap();
-                    }             
+                    } 
+                    else
+                    {
+                        _engine.redoStep();
+                        show();
+                    }
                     break;
                 case SDLK_ESCAPE:
                     return;

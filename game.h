@@ -23,9 +23,15 @@ public:
 	void storeStep(Step S);
 	void undoStep();
 	void redoStep();
+    Step reverseLast() {
+        return *_currentMove;
+    }
 	bool isStarted() const {
 		return _currentMove != __moveHistory + 1;
 	}
+	bool isTheLastMove() const {
+        return _currentMove == _lastMove;
+    }
 	int stepCount() const {
 		return (_currentMove - __moveHistory);
 	}
