@@ -24,6 +24,7 @@
 #include "sdl_dep.h"
 #include "engine.h"
 
+static const int NUMBER_OF_STONES = 5;
 class View2D
 {
     static bool SDL_Initialized;
@@ -40,12 +41,18 @@ class View2D
     SDL_Rect _boardPosition;
     
     Engine & _engine;
-  
+    
+    mutable SDL_Rect __stones [/*teams*/ 2][/*stone IDs*/  NUMBER_OF_STONES];
+    SDL_Rect getPosition(const int& team, const int& ID) const;
+    SDL_Rect getDirectPosition(const int& col, const int& row) const;
+    void refreshStones() const;
+    void showStones() const;
+    void glidingEffect(const Step&);
+    
     void createWindow();
     void loadTextureImage();
     
-    void showStones() const;
-    void show() const;
+    void show(const bool& refresh_stones = true) const;
     
 public:
     View2D(const char* name,const int w, const int h, Engine& );

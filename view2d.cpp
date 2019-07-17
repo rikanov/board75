@@ -24,6 +24,11 @@ static const int OFFSET_Y = 21;
 static const int STEP_X = 88;
 static const int STEP_Y = 88;
 
+static inline int sgn(const int& x)
+{
+    return x == 0 ? 0 : (x > 0 ? 1 : -1);
+}
+
 bool View2D::SDL_Initialized = false;
 
 View2D::View2D(const char* name,const int w, const int h, Engine& B)
@@ -94,12 +99,12 @@ void View2D::loadTextureImage()
         std::cerr << "IMG_LoadTexture Error: "<< SDL_GetError() << std::endl;
         exit(5);
     }
-    SDL_QueryTexture( _boardTexture,NULL,NULL, &w,&h);
+    SDL_QueryTexture( _boardTexture, NULL, NULL, &w, &h);
     
-    _boardPosition.x=(SCR_WIDTH-w)/2;
-    _boardPosition.y=(SCR_HEIGHT-h)/2;
-    _boardPosition.w=w;
-    _boardPosition.h=h;
+    _boardPosition.x = (SCR_WIDTH-w) / 2;
+    _boardPosition.y = (SCR_HEIGHT-h) / 2;
+    _boardPosition.w = w;
+    _boardPosition.h = h;
 }
 
 void View2D::showStones() const
@@ -107,24 +112,65 @@ void View2D::showStones() const
     for(int team = 0; team < 2; ++team)
         for(int ID = 1; ID < 6; ++ID)
         {
-            SDL_Rect pos;
-            const Node place = *_engine.getStone(team == 0 ? - ID : ID);
-            pos.x = OFFSET_X + (place.col - 1) * STEP_X;
-            pos.y = OFFSET_Y + (place.row - 1) * STEP_Y;
-            pos.w = STONE_SIZE;
-            pos.h = STONE_SIZE;
-            pos.y = SCR_HEIGHT - pos.y - STONE_SIZE; // vertical reflection
+            SDL_Rect pos = __stones[team][ID];
             SDL_RenderCopy(_render, _stone[team], NULL, &pos);
+        }
+    SDL_RenderPresent(_render);
+}
+
+void View2D::refreshStones() const
+{
+    for(int team = 0; team < 2; ++team)
+        for(int ID = 1; ID < 6; ++ID)
+        {
+             __stones[team][ID] = getPosition(team, ID);
         }
 }
 
-void View2D::show() const
+SDL_Rect View2D::getPosition(const int& team, const int& ID) const
+{
+    const Node place = *_engine.getStone(team == 0 ? - ID : ID);
+    SDL_Rect result = getDirectPosition(place.col, place.row);    
+    return result;
+}
+
+SDL_Rect View2D::getDirectPosition(const int& col, const int& row) const
+{
+    SDL_Rect result;
+    result.x = OFFSET_X + (col - 1) * STEP_X;
+    result.y = OFFSET_Y + (row - 1) * STEP_Y;
+    result.w = STONE_SIZE;
+    result.h = STONE_SIZE;
+    result.y = SCR_HEIGHT - result.y - STONE_SIZE; // vertical reflection
+    return result;
+}
+
+void View2D::glidingEffect(const Step& step)
+{
+    Node n0 = **step.stone;
+    Node n1 = *step.place;
+    const int dx = n1.col - n0.col;
+    const int dy = n1.row - n0.row;
+    const int team = (n0.occupied > 0);
+    const int ID = team == 0 ? -n0.occupied : n0.occupied;
+    for(int i = 0; i < STEP_X ; ++i)
+    {
+        __stones[team][ID].x += dx;
+        __stones[team][ID].y -= dy;
+        show(false);
+    }
+}
+
+void View2D::show(const bool& refresh_stones) const
 {
     SDL_RenderClear(_render);
     SDL_RenderCopy(_render, _boardBackground, NULL,NULL);
     SDL_RenderCopy(_render,_boardTexture,NULL,&_boardPosition );
+    if(refresh_stones)
+    {
+        refreshStones();
+    }
     showStones();
-    SDL_RenderPresent(_render);
 }
 void View2D::select()
 {
@@ -150,7 +196,9 @@ void View2D::select()
                     }
                     else
                     {
-                        _engine.storeStep(_engine.getStep());
+                        const Step step = _engine.getStep();
+                        glidingEffect(step);
+                        _engine.storeStep(step);
                         _engine.seekerSwap();
                     }             
                     break;
