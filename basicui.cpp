@@ -59,12 +59,12 @@ void BasicUI::start()
     {
         if ( _isPlayerTurn )
         {
-            finish = _autoPlay ? autoPlay(9) : yourTurn();
+            finish = _autoPlay ? autoPlay(10) : yourTurn();
             _isPlayerTurn = false;
         }
         else
         {
-            finish = _autoPlay ? autoPlay(8) :  myTurn();
+            finish = _autoPlay ? autoPlay(9) :  myTurn();
             _isPlayerTurn = true;
         }
     }

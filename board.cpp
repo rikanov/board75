@@ -21,7 +21,6 @@
 Board::Board(const int& S)
 :_rows(S + 2)
 ,_cols(S)
-,__move(nullptr)
 {
     // --- Create grid --- //
     // allocate size
@@ -59,51 +58,58 @@ Board::Board(const int& S)
             }
         }
     }
-    
-    // --- Collections of stones --- /
-    // allocate memory
-    __collectionOfPlayer = new Node* [_cols + 1] ;     /*null-terminated array*/
-    __collectionOfProgram = new Node* [_cols + 1];  /*null-terminated array*/
-    // default positions
-    reset();
-    
-    // set the middle field of the board as the place of victory
-    _WINNER_SPOT = &__theGrid[(_rows + 1) / 2][(_cols + 1) / 2];
-    // --------------- //
 }
 
-void Board::reset()
-{
-    for (int row = 1; row < _rows + 1; ++row)
-    {
-        for(int col = 1; col < _cols + 1; ++col)
-        {
-            __theGrid[row][col].occupied = 0;
-        }
-    }
-    for(int id = 0; id <_cols; ++id)
-    {
-        __collectionOfPlayer[id] = &__theGrid[1][id + 1];
-        __collectionOfPlayer[id]->occupied = -id -1 ;
-        __collectionOfProgram[id] = &__theGrid[_rows][id + 1];
-        __collectionOfProgram[id]->occupied = id + 1;
-    }
-    // null-terminate arrays for the opponents' stones
-    __collectionOfPlayer[_cols] = nullptr;
-    __collectionOfProgram[_cols] = nullptr;
+static inline void NL() {
+	std::cout << std::endl << '|';
+}
 
-    // --- set step stacks for UI -- //
-    delete __move; // purify it
-    __move = new Step[MAX_NUMBER_OF_MOVES];
-    _lastMove =  __move;
-    // -------------- //
-    srand(time(NULL));
+void Board::show() const
+{
+	const char* separator = "---- ";
+	const char* empty = "    |";
+	for (int row = _rows; row > 0; --row)
+	{
+		NL();
+		for (int col = 1; col <= _cols; ++col)
+		{
+			std::cout << separator;
+		}
+		NL();
+		for (int col = 1; col <= _cols; ++col)
+		{
+			const Node *field = &(__theGrid[row][col]);
+			const int CH = field->occupied;
+			if (field == _WINNER_SPOT && CH == 0)
+			{
+				std::cout << " () |";
+				continue;
+			}
+			if (CH < 0)
+			{
+				std::cout << ' ' << 'A' << (-1 * CH) << " |";
+			}
+			else if (CH > 0)
+			{
+				std::cout << ' ' << 'X' << (CH) << " |";
+			}
+			else
+			{
+				std::cout << empty;
+			}
+		}
+	}
+	NL();
+	for (int col = 1; col <= _cols; ++col)
+	{
+		std::cout << separator;
+	}
+	NL();
 }
 
 Board::~Board()
 {
     delete[] __collectionOfPlayer;
     delete[] __collectionOfProgram;
-    delete __move;
 }
 

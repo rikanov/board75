@@ -19,6 +19,8 @@
 #ifndef BOARD_H
 #define BOARD_H
 
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>
 #include "str_step.h"
 
 class Board
@@ -34,12 +36,13 @@ protected:
     Node ** __collectionOfPlayer;
     Node ** __collectionOfProgram;
     
-    // Store steps for UI (undo, redo)
-    Step * __move, *_lastMove;
 public:
     Board(const int&);
     virtual ~Board();
-    void reset();
+	const Node * getStone(const int & ID) const {
+		return ID > 0 ? __collectionOfProgram[ID - 1] : __collectionOfPlayer[-ID - 1];
+	}
+	void show() const;
 };
 
 #endif // BOARD_H

@@ -23,6 +23,16 @@ public:
         std::swap(*stone, place);
     }
 
+	bool operator == (const Step& S) const
+	{
+		return isValid() && S.isValid() && *stone == *S.stone && *place == *S.place;
+	}
+
+	bool operator != (const Step& S) const
+	{
+		return !isValid() || !S.isValid() || *stone != *S.stone || *place != *S.place;
+	}
+
     void printData() const
     {
         printf("X%d->(%d, %d) ", (*stone)->occupied, place->row, place->col);
