@@ -4,8 +4,13 @@
 
 const int size = 5;
 
+void stopSDL()
+{
+    SDL_Quit();
+}
 int main(int argc, char ** argv)
 {
+    std::atexit(stopSDL);
     Engine board(5, 7);
     View2D teszt("BOARD", 450, 630, board);
     teszt.select();
